@@ -3,7 +3,7 @@
 #include <U8g2lib.h>
 #include <math.h>
 #include <DueTimer.h>
-#include <Keyboard.h>
+// #include <Keyboard.h>
 
 // Definições
 #define encoder0PinA 36
