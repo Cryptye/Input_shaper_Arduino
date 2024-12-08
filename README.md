@@ -32,4 +32,4 @@ Utilização do Programa
     * * Comandos incluem movimentos manuais, movimentação não controlada e movimentação controlada por input shaping.
 
 Licença
-Este projeto é distribuído sob a licença MIT. Sinta-se à vontade para usar, modificar e distribuir conforme necessário.
+Este projeto é distribuído gratuitamente. Sinta-se à vontade para usar, modificar e distribuir conforme necessário.
