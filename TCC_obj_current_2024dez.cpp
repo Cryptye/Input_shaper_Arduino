@@ -45,7 +45,7 @@ volatile int flaghome = 0;
 volatile int encoder0Pos = 0;
 volatile int encoder1Pos = 0;
 const float pi = 3.14159267;
-const float kp = 0.25; // 0.08 original
+const float kp = 0.25;
 float ang_pen = 0;    // para o desenho
 float pen_conv = 0;    // para o desenho
 int flagbtn = 0;
@@ -58,15 +58,9 @@ int ref_pos = 9950;
 int erro_pos = 0;
 int control_pos = 0;
 int selector = 2;
-unsigned long startMillis;
-unsigned long currentMillis;
 
 // Variáveis Input Shaper
-// float WN = 3.46; float Z = 0.0738; float e = 2.71828;                // -> Conferir se usa Hz ou rad/s
-// float WN = 4.517; float Z = 0.0738; float e = 2.71828;                // -> Conferir se usa Hz ou rad/s
-float WN = 4.33; float Z = 0.0514; float e = 2.71828;                // -> Conferir se usa Hz ou rad/s
-// float WN = 4.46; float Z = 0.0579; float e = 2.71828;                // -> Conferir se usa Hz ou rad/s
-// int WN = 7.24; float Z = 0.03; float e = 2.71828;                // -> Conferir se usa Hz ou rad/s
+float WN = 4.33; float Z = 0.0514; float e = 2.71828;   
 float K = pow(e, -Z*pi/sqrt(1-sq(Z)));
 float T = pi/(WN*sqrt(1-sq(Z)));
 int final_ref_pos = 12500;  // Levar o carrinho até o final da trilha, por ex. 13300
@@ -74,7 +68,6 @@ int stage_flg = 1;
 float denominador = 0;
 int I1 = 0;  // (Distância 1 em fração * 19000)
 int I2 = 0;
-// int I3 = (1-(sq(K)/denominador))*final_ref_pos;
 int I3 = 0;
 int I4 = 0;
 int impulsos[4] = {0, 0, 0, 0};
@@ -239,11 +232,12 @@ public:
 };
 
 MotorCC motor(INA, INB, PULSE);
-Desenhador desenho;  // Aparentemente tem q tirar os () quando a classe é 'void' nos parâmetros
+Desenhador desenho;
 
 // -------------------------------------------------------------------------------------------------------------------------------------
 
 // Função Limite -> Chamada quando a chave de fim de curso é pressionada
+
 void limite() {
   if (flaghome == 0) { // vai sempre entrar na primeira iteração do programa, pois flaghome é 0 inicialmente
     motor.frenagem();  // freia o motor, pois a chave de fim de curso foi pressionada
@@ -276,7 +270,6 @@ void manual(void) {
   ref_pos = encoder0Pos;
   if (est_dir == 0) { ref_pos = encoder0Pos + 1000; }
   if (est_esq == 0) { ref_pos = encoder0Pos - 1000; }
-  // ref_pos = constrain(ref_pos, 700, 19200);
   ref_pos = constrain(ref_pos, 100, 12500);
 }
 
@@ -309,29 +302,23 @@ void zera(void) {
 void aplica_controle(void) {
   if (controle < 0) { motor.backward(controle); }
   if (controle > 0) { motor.forward(controle); }
-  // if (controle < 0) { motor.backward(-150); }
-  // if (controle > 0) { motor.forward(150); }
 }
 
 // Função Calcula Controle
 void calc_controle(void) {
-  // ------------------------------------------------------------------------------------- Segunda parte
-  // Fazer o cálculo para o A1, A2 e A3, nos tempos devidos
-  erro_pos = ref_pos - encoder0Pos;  // posição de ref = posição inicial (máxima)
-  control_pos = kp * erro_pos;       // calculo * 0.08
+  erro_pos = ref_pos - encoder0Pos;
+  control_pos = kp * erro_pos;      
 
-  if (control_pos >= 255) {  // control_pos>=255
+  if (control_pos >= 255) { 
     control_pos = 255;
-  }  // control_pos=255;
+  }
 
   if (control_pos <= -255) {
     control_pos = -255;
   }
 
-  // if (control_pos < 10 & control_pos > -10) {control_pos = 0;}
-
   controle = control_pos;  // aplica o controle positivo se cálculo anterior for > que 0 e negativo caso contrário
-  aplica_controle();       // Aplicar o controle em loop até que as 3 posições sejam alcançadas
+  aplica_controle();    
 }
 
 // Função que chama as telas do programa
@@ -350,9 +337,8 @@ void setup(void) {
 
   if (selector == 3) {
     denominador = 1 + 2*K + sq(K);
-    I1 = (1/denominador)*final_ref_pos;  // (Distância 1 em fração * 19000)
+    I1 = (1/denominador)*final_ref_pos;  // (Distância 1 em fração * 12500)
     I2 = I1+(2*K/denominador)*final_ref_pos;
-    // int I3 = (1-(sq(K)/denominador))*final_ref_pos;
     I3 = I2+(sq(K)/denominador)*final_ref_pos;
     impulsos[0] = {I1};
     impulsos[1] = {I2};
@@ -419,11 +405,6 @@ void setup(void) {
       Serial.println(impulsos[i]); 
     }
   }
-
-  // Serial.println("start");
-  // Serial.println(T1); Serial.println(T2); Serial.println(T3);
-  
-  // Serial.println(1/denominador); Serial.println(2*K/denominador); Serial.println(sq(K)/denominador); Serial.println(T2);
   
   // Configura Pinos Botoeiras e Fim de Curso
   pinMode(btn_sel, INPUT_PULLUP);
@@ -452,7 +433,6 @@ void setup(void) {
   attachInterrupt(digitalPinToInterrupt(encoder0PinA), encoder_carro, CHANGE);    // encoder pin on interrupt
   attachInterrupt(digitalPinToInterrupt(encoder1PinA), encoder_pendulo, CHANGE);  // encoder pin on interrupt
   attachInterrupt(digitalPinToInterrupt(fim_curso), limite, FALLING);             // encoder pin on interrupt
-
   // Inicializa Display e Seta configurações iniciais
   u8g2.begin();  //u8g2_prepare();
   // Desenha Tela Inicial
@@ -470,11 +450,8 @@ void setup(void) {
   last_sel = digitalRead(est_sel);
 
   // Configura Interrupção de Controle
-  // Timer4.attachInterrupt(controler.calc_controle(void));
   Timer4.attachInterrupt(calc_controle);
   Timer4.setFrequency(20000);  // Interrupção a cada 20ms
-
-  // Serial.println('\n'); Serial.println(interval1.get()); Serial.println(interval2.get());
 }
 
 void loop(void) {
@@ -482,11 +459,10 @@ void loop(void) {
   est_sel = digitalRead(btn_sel);  // botão da direita -> estado não pressionado = 1
   est_dir = digitalRead(btn_dir);  // botão do meio -> estado não pressionado = 1
   est_esq = digitalRead(btn_esq);  // botão da esquerda -> estado não pressionado = 1
-  // Serial.print(millis());
 
-  // Serial.println(pos_carro+(pen_conv*1000)); // -> p/ plotar carro + pendulo
+  Serial.println(pos_carro+(pen_conv*1000)); // -> p/ plotar carro + pendulo
   // Serial.println(pen_conv*1000);                // -> p/ plotar apenas pendulo
-  Serial.println(pos_pen);                // -> p/ plotar apenas pendulo em grau
+  // Serial.println(pos_pen);                // -> p/ plotar apenas pendulo em grau
 
   // Verifica e Seleciona (Zera / Start / Manual)
   if (((est_sel == 0) & (last_sel == 1)) || (Serial.read() == 'd')) { sel = !sel; }  // muda de 0 para 1 na primeira vez que est_sel é apertado
@@ -497,7 +473,6 @@ void loop(void) {
       flaghome = 0;
       motor.frenagem();
       Timer4.stop();
-      // if (est_dir == 0 & last_dir == 1){
       if (((est_dir == 0) & (last_dir == 1)) || (Serial.read() == 's')) {
         flagbtn++;
         if (flagbtn > 3) { flagbtn = 0; }
@@ -515,7 +490,6 @@ void loop(void) {
     case 1:  // Selecionado
       switch (flagbtn) {
         case 0:  // Executa Homing  ->  Aciona movimentação sem controle algum, até bater na chave de fim de curso
-          // Serial.print("flaghome: "), Serial.print(flaghome), Serial.print('\n');
           zera();
           break;
         case 1:             // Inicia Controle
@@ -531,7 +505,6 @@ void loop(void) {
           break;
         case 3:  // Modo Shaper
         if (stage_flg == 1){delay(3000);}
-          // Serial.println(stage_flg);
           if (selector == 3){
             if (stage_flg == 1){
               ref_pos = impulsos[0];
@@ -559,7 +532,6 @@ void loop(void) {
 
             if (stage_flg == 4){
               if (encoder0Pos >= impulsos[2]){
-                // Serial.println("Chegou!!!!!");
                 interval1.reset(); interval2.reset(); Timer4.stop(); sel=0;
               }
             }
@@ -629,41 +601,9 @@ void loop(void) {
               }
             }
           }
-            
-          // if (stage_flg == 1){
-          //   ref_pos = impulsos[2];
-          //   Timer4.start();
-          //   stage_flg += 1;
-          // }
-
-          // if (encoder0Pos > I1 && stage_flg == 2){
-          //   Timer4.stop();
-          //   motor.frenagem();
-          //   stage_flg += 1;
-          //   interval1.start();
-          // }
-
-          // if (encoder0Pos > I1 && stage_flg == 3){
-          //   if (interval1.done()){Timer4.start(); stage_flg += 1;}
-          // }
-
-          // if (encoder0Pos > I2 && stage_flg == 4){
-          //   Timer4.stop();
-          //   motor.frenagem();
-          //   stage_flg += 1;
-          //   interval2.start();
-          // }
-
-          // if (encoder0Pos > I2 && stage_flg == 5){
-          //   if (interval2.done()){Timer4.start(); stage_flg += 1;}
-          // }
-
-          // if (encoder0Pos > I3-200 && stage_flg == 6){
-          //   stage_flg = 1; interval1.reset(); interval2.reset();}
       }
       break;
   }
-  // sel = 0;
 
   // Faz Mapeamento da leitura dos Encoders
   // pos_carro= map(encoder0Pos, 0, 19900, 0, 850);
